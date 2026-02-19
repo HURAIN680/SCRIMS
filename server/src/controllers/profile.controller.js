@@ -10,7 +10,7 @@ export const getMyProfile = async (req, res) => {
       fullName: user.fullName,
       email: user.email,
       role: user.role,
-      phoneNumber: user.phoneNumber,
+      phone: user.phone,
       department: user.department,
       profilePicture: user.profilePicture,
       collegeIdImage: user.collegeIdImage,
@@ -51,12 +51,15 @@ export const getMyProfile = async (req, res) => {
 /* ================= UPDATE PROFILE ================= */
 export const updateProfile = async (req, res) => {
   try {
-    const user = req.user;
+    // ✅ Always fetch fresh mongoose document
+    const user = await User.findById(req.user._id);
+    if (!user) return res.status(404).json({ message: "User not found" });
 
     const {
       fullName,
-      phoneNumber,
+      phone,
       department,
+      email,
 
       // student
       rollNumber,
@@ -81,8 +84,17 @@ export const updateProfile = async (req, res) => {
 
     /* ---------- COMMON FIELDS ---------- */
     if (fullName?.trim()) user.fullName = fullName;
-    if (phoneNumber?.trim()) user.phoneNumber = phoneNumber;
+    if (phone?.trim()) user.phone = phone;
     if (department?.trim()) user.department = department;
+
+    /* ---------- EMAIL UPDATE ---------- */
+    if (email?.trim() && email !== user.email) {
+      const existingUser = await User.findOne({ email });
+      if (existingUser) {
+        return res.status(400).json({ message: "Email already in use" });
+      }
+      user.email = email;
+    }
 
     /* ---------- FILE UPLOADS ---------- */
     if (req.files?.profilePicture?.length > 0) {
@@ -94,7 +106,7 @@ export const updateProfile = async (req, res) => {
       user.verificationStatus = "pending";
     }
 
-    /* ---------- RESET ROLE-SPECIFIC FIELDS ---------- */
+    /* ---------- CLEAR ROLE FIELDS FIRST ---------- */
     user.rollNumber = undefined;
     user.year = undefined;
     user.section = undefined;
@@ -116,16 +128,12 @@ export const updateProfile = async (req, res) => {
       if (rollNumber?.trim()) user.rollNumber = rollNumber;
       if (year?.trim()) user.year = year;
       if (section?.trim()) user.section = section;
-      delete user.assignedDepartments;
-      delete user.managedDepartments;
     }
 
     if (user.role === "faculty") {
       if (employeeId?.trim()) user.employeeId = employeeId;
       if (designation?.trim()) user.designation = designation;
       if (cabin?.trim()) user.cabin = cabin;
-      delete user.assignedDepartments;
-      delete user.managedDepartments;
     }
 
     if (user.role === "staff") {
