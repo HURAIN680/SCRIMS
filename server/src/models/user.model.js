@@ -11,11 +11,11 @@ const userSchema = new mongoose.Schema(
       required: true,
     },
     department: String,
-    profilePic: String,
+    profilePicture: String,
     collegeIdImage: String,
     verificationStatus: {
       type: String,
-      enum: ["unverified", "verified"],
+      enum: ["unverified", "pending","verified"],
       default: "unverified",
     },
 
